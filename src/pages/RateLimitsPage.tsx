@@ -14,7 +14,7 @@ import {
   TierComparisonTable,
   type UsageBarConfig,
   type TierDisplayData,
-} from '@sudobility/ratelimit-components';
+} from '@sudobility/components/ratelimit';
 import { colors } from '@sudobility/design';
 import { cn } from '../lib/cn';
 import type { RateLimitsPageProps } from '../types';

@@ -24,7 +24,7 @@ export default defineConfig({
         '@sudobility/components',
         '@sudobility/design',
         '@sudobility/ratelimit_client',
-        '@sudobility/ratelimit-components',
+        '@sudobility/components/ratelimit',
         '@sudobility/types',
       ],
       output: {

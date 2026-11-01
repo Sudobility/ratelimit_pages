@@ -28,7 +28,7 @@ vi.mock('@sudobility/components', () => ({
 }));
 
 // Mock the child components
-vi.mock('@sudobility/ratelimit-components', () => ({
+vi.mock('@sudobility/components/ratelimit', () => ({
   UsageHistoryChart: vi.fn(({ entries, periodType, labels, height }) => (
     <div data-testid='usage-history-chart'>
       <span data-testid='chart-entries-count'>{entries.length}</span>

@@ -24,7 +24,7 @@ vi.mock('@sudobility/components', () => ({
 }));
 
 // Mock the child components with enhanced data exposure for testing
-vi.mock('@sudobility/ratelimit-components', () => ({
+vi.mock('@sudobility/components/ratelimit', () => ({
   UsageDashboard: vi.fn(
     ({
       usageBars,

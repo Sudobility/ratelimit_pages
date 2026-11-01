@@ -13,7 +13,7 @@ import {
   UsageHistoryChart,
   type HistoryEntryData,
   type PeriodType,
-} from '@sudobility/ratelimit-components';
+} from '@sudobility/components/ratelimit';
 import { RateLimitPeriodType } from '@sudobility/types';
 import { colors } from '@sudobility/design';
 import { cn } from '../lib/cn';
