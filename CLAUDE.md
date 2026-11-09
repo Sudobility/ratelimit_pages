@@ -1,177 +1,88 @@
 # RateLimit Pages
 
-> **Git policy — never auto-commit or auto-push.** Leave your work in the working tree.
-> Run `git commit`, `git push`, `gh pr create`, or `scripts/push_all.sh` **only when the user
-> explicitly asks in that turn**. Approval for an earlier change does not carry forward, and
-> finishing a task is not permission to commit it.
+> **Git policy — never auto-commit or auto-push.** Leave work in the working tree.
+> Run `git commit`, `git push`, or `gh pr create` **only when the user explicitly asks
+> in that turn**. Approval for an earlier change does not carry forward. Stay on the
+> current branch (currently `main`); do not create feature branches.
 
-Self-contained rate limit pages for React applications with usage dashboards and tier comparison.
+Self-contained rate limit page components for React apps: a usage dashboard, a
+usage-history chart, and a combined tabbed dashboard.
 
-**npm**: `@sudobility/ratelimit_pages` (public)
+**Package**: `@sudobility/ratelimit_pages` — published to GitHub Packages (not npmjs).
 
 ## Tech Stack
 
-- **Language**: TypeScript
-- **Runtime**: Bun
-- **Package Manager**: Bun (do not use npm/yarn/pnpm for installing dependencies)
-- **Build**: Vite (library mode, ESM + UMD)
-- **Test**: Vitest
-- **UI**: Requires @sudobility/ratelimit-components
+- **Language**: TypeScript (strict). **Runtime/PM**: Bun (do not use npm/yarn/pnpm to install).
+- **Build**: Vite library mode, **ESM-only** (`formats: ['es']`) → `dist/index.js` + `dist/index.d.ts`.
+- **Test**: Vitest (jsdom, Testing Library).
+- **Lint/format**: ESLint (flat config) + Prettier.
+
+## Commands
+
+```bash
+bun run build        # tsc (emits .d.ts) && vite build && node scripts/fix-esm-imports.mjs
+bun run dev          # vite build --watch
+bun run type-check   # tsc --noEmit  (hyphenated — see gotcha)
+bun run lint         # eslint .
+bun run lint:fix     # eslint . --fix
+bun run format       # prettier --write
+bun run test:unit    # vitest run (excludes *.integration.test)
+bun run test:watch   # vitest watch
+```
+
+Pre-commit (no `verify` script): `bun run type-check && bun run lint && bun run test:unit && bun run build`
 
 ## Project Structure
 
 ```
 src/
-├── index.ts          # Public exports
-├── types.ts          # Page-specific types
-├── lib/              # Utility functions
-│   └── utils.ts      # Helper utilities
-├── pages/            # Page components
-│   ├── index.ts      # Page exports
-│   └── RateLimitsPage.tsx  # Main rate limits page
-└── __tests__/        # Test files
-    └── RateLimitsPage.test.tsx
+├── index.ts                      # Public exports (3 components, types, cn)
+├── types.ts                      # All prop + label interfaces
+├── lib/cn.ts                     # Tailwind class merge (clsx + tailwind-merge)
+├── pages/
+│   ├── RateLimitsPage.tsx        # Usage bars + tier comparison
+│   ├── RateLimitHistoryPage.tsx  # Usage-history chart w/ period tabs
+│   └── RateLimitsDashboard.tsx   # Tabs combining the two pages
+└── __tests__/                    # setup.ts + *.test.tsx / *.test.ts
+scripts/fix-esm-imports.mjs       # post-build ESM specifier rewrite
 ```
 
-## Commands
-
-```bash
-bun run build        # Build with Vite (tsc + vite build)
-bun run dev          # Watch mode build
-bun run type-check   # TypeScript check
-bun run lint         # Run ESLint
-bun run lint:fix     # Fix lint issues
-bun run format       # Format with Prettier
-bun run test         # Run tests once
-bun run test:watch   # Watch mode tests
-```
-
-## Pages
-
-| Page | Purpose |
-|------|---------|
-| `RateLimitsPage` | Usage dashboard with tier comparison |
-
-## Usage
-
-```tsx
-import { RateLimitsPage } from '@sudobility/ratelimit_pages';
-
-<RateLimitsPage
-  networkClient={networkClient}
-  baseUrl="https://api.example.com"
-  token={authToken}
-  entitySlug="my-org"
-  autoFetch={true}
-/>
-```
-
-## Props
-
-```typescript
-interface RateLimitsPageProps {
-  networkClient: NetworkClient;
-  baseUrl: string;
-  token: string;
-  entitySlug?: string;
-  autoFetch?: boolean;     // Default: true
-  className?: string;
-  labels?: {
-    loadingText?: string;
-    errorText?: string;
-    retryText?: string;
-  };
-}
-```
-
-## Features
-
-- Usage bars (hourly, daily, monthly)
-- Tier comparison table
-- Auto-refresh on mount
-- Error handling with retry
-- Loading states
-- Customizable labels
-
-## Peer Dependencies
-
-Required in consuming app:
-- `react` >= 18.0.0
-- `react-dom` >= 18.0.0
-- `@sudobility/types` - Common types
-- `@sudobility/design` - Design tokens
-- `@sudobility/components` - Base components
-- `@sudobility/ratelimit_client` - Data hooks
-- `@sudobility/ratelimit-components` - UI components
-
-## Publishing
-
-```bash
-bun run build        # Build first
-npm publish          # Publish to npm
-```
+There is no `pages/index.ts`; `src/index.ts` imports each page module directly.
 
 ## Architecture
 
-```
-ratelimit_pages (this package)
-    ├── ratelimit_client (data layer)
-    └── ratelimit-components (UI layer)
-        ↑
-shapeshyft_app (consumes pages)
-sudojo_app (consumes pages)
-```
+- **Data**: pages call `useRateLimits(networkClient, baseUrl, testMode)` from
+  `@sudobility/ratelimit_client`, then `refreshConfig(token, entitySlug ?? '')`.
+- **UI primitives**: come from `@sudobility/components` and its **`@sudobility/components/ratelimit`
+  subpath** (`UsageDashboard`, `TierComparisonTable`, `UsageHistoryChart`). Design tokens
+  from `@sudobility/design` (`colors`).
+- Pages wrap themselves in `<Section>` internally — consumers must **not** wrap them again.
+- `RateLimitsDashboard` renders `RateLimitsPage` / `RateLimitHistoryPage` per active tab.
 
-## Workspace Context
+## Conventions
 
-This project is part of the **ShapeShyft** multi-project workspace at the parent directory. See `../CLAUDE.md` for the full architecture, dependency graph, and build order.
-
-## Downstream Impact
-
-| Downstream Consumer | Relationship |
-|---------------------|-------------|
-| `shapeshyft_app` | Direct dependency - renders rate limit dashboard pages |
-
-After making changes:
-1. Run checks (no `verify` script - see below)
-2. `npm publish`
-3. In `shapeshyft_app`: `bun update @sudobility/ratelimit_pages` -> rebuild
-
-## Local Dev Workflow
-
-```bash
-# In this project:
-bun link
-
-# In shapeshyft_app:
-bun link @sudobility/ratelimit_pages
-
-# If also changing ratelimit_client, link it first:
-cd ../ratelimit_client && bun link
-cd ../ratelimit_pages && bun link @sudobility/ratelimit_client
-
-# Rebuild after changes:
-bun run build
-
-# When done, unlink:
-bun unlink @sudobility/ratelimit_pages && bun install
-```
-
-## Pre-Commit Checklist
-
-No `verify` script. Run checks manually:
-
-```bash
-bun run type-check && bun run lint && bun run test && bun run build
-```
+- **Labels are required and exhaustive.** Component `labels` props are
+  `Required<...Labels>` — no built-in default strings; callers supply every field.
+  `RateLimitsDashboardLabels` nests `limitsPage` + `historyPage` label objects.
+- `token` is `FirebaseIdToken` = `string | null`; effects no-op when falsy.
+- Styling via Tailwind classes merged with `cn`.
 
 ## Gotchas
 
-- **Typecheck command is `type-check` (hyphenated)** -- differs from most other workspace projects which use `typecheck`. Running `bun run typecheck` will silently do nothing.
-- **Vite library mode build** -- produces ESM + UMD. Build is `tsc && vite build`.
-- **`ratelimit_client` is in `peerDependenciesMeta`** -- it's required but listed in the meta section, not main `peerDependencies`. Check both when debugging dependency issues.
-- **UI components come from `@sudobility/ratelimit-components`** (note the hyphen) -- separate package from this one.
+- **Typecheck script is `type-check` (hyphenated).** `bun run typecheck` does nothing.
+- **Test script is `test:unit`, not `test`.** There is no `bun run test`.
+- **ESM-only build, 3-step.** Build is `tsc && vite build && node scripts/fix-esm-imports.mjs`;
+  the final step rewrites extensionless relative imports so Node's ESM loader resolves them.
+  There is no UMD/CJS output.
+- **No separate `ratelimit-components` package.** Rate-limit UI lives under the
+  `@sudobility/components/ratelimit` subpath of `@sudobility/components`.
+- **`@sudobility/ratelimit_client` is required but declared in `peerDependenciesMeta`**
+  (`optional: false`), not in `peerDependencies`. Check both sections when debugging deps.
+- **GitHub Packages registry.** `.npmrc` sets `@sudobility:registry=https://npm.pkg.github.com`;
+  installs need a token with `read:packages`. Publishing is done by CI, not `npm publish` locally.
 
-## Git Workflow
+## Workspace Context
 
-- Do not use feature branches for code changes. Always stay on the current branch.
+Part of the **ShapeShyft** multi-project workspace (see `../CLAUDE.md`). Consumed by
+downstream apps (e.g. `shapeshyft_app`) that render these dashboard pages. After changes:
+run the pre-commit checks; CI publishes on `main`/`develop`; consumers bump + rebuild.
